@@ -1,9 +1,13 @@
-import { Controller, Get, Post, Param, Query, Body, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query, Body, HttpException, HttpStatus, Inject } from '@nestjs/common';
 import { DatabaseOperationsService } from './database/database-operations.service';
+import { Cache, CACHE_MANAGER } from '@nestjs/cache-manager';
 
 @Controller()
 export class AdminController {
-  constructor(private readonly databaseOperationsService: DatabaseOperationsService) {}
+  constructor(
+    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private readonly databaseOperationsService: DatabaseOperationsService
+  ) {}
 
   @Post('balances/deposit/:userId')
   async depositToBalance(@Param('userId') userId: string, @Body('amount') amount: number) {
@@ -23,6 +27,8 @@ export class AdminController {
 
   @Get('admin/best-profession')
   async getBestProfession(@Query('start') start: string, @Query('end') end: string) {
+    const cacheKey = `best_profession_${start}_${end}`;
+
     try {
       const startDate = new Date(start);
       const endDate = new Date(end);
@@ -32,6 +38,9 @@ export class AdminController {
       }
 
       const profession = await this.databaseOperationsService.getBestProfession(startDate, endDate);
+
+      await this.cacheManager.set(cacheKey, { profession }, 3600000);
+
       return { profession };
     } catch (error) {
       console.error(`An error occurred during getting best profession`, error);
@@ -45,6 +54,8 @@ export class AdminController {
     @Query('end') end: string,
     @Query('limit') limit = 2, // Default limit is 2
   ) {
+    const cacheKey = `best_clients_${start}_${end}_${limit}`;
+
     try {
       const startDate = new Date(start);
       const endDate = new Date(end);
@@ -54,6 +65,9 @@ export class AdminController {
       }
 
       const clients = await this.databaseOperationsService.getBestClients(startDate, endDate, +limit);
+
+      await this.cacheManager.set(cacheKey, { clients }, 3600000);
+
       return { clients };
     } catch (error) {
       console.error(`An error occurred during fetching best clients`, error);
