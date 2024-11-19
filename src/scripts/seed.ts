@@ -57,5 +57,4 @@ async function seed() {
   console.log('Seeding completed!');
   process.exit();
 }
-
 seed();
