@@ -19,14 +19,14 @@ export class Contract extends Model {
   @Column
   ContractorId: number;
 
-  @BelongsTo(() => Profile, 'ContractorId')
+  @BelongsTo(() => Profile, { foreignKey: 'ContractorId', as: 'Contractor' })
   contractor: Profile;
 
   @ForeignKey(() => Profile)
   @Column
   ClientId: number;
 
-  @BelongsTo(() => Profile, 'ClientId')
+  @BelongsTo(() => Profile, { foreignKey: 'ClientId', as: 'Client' })
   client: Profile;
 
   @HasMany(() => Job)

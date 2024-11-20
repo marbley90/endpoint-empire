@@ -15,9 +15,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
-  // Start the application
-  await app.listen(3000);
-  console.log(`Application is running on: ${await app.getUrl()}`);
+  await app.listen(3001);
+  console.log(`🚀 Application is running on: http://localhost:3001`);
+  console.log(`📖 Swagger API documentation is available at: http://localhost:3001/api`);
 }
-
 bootstrap();

@@ -1,98 +1,65 @@
 # DEEL BACKEND TASK
 
-💫 Welcome! 🎉
+### Project Overview
 
-This backend exercise involves building a Node.js/Express.js app that will serve a REST API. We imagine you should spend around 3 hours at implement this feature.
+This project implements a RESTful API built using NestJS with Express as the underlying HTTP server. The API is designed to manage client-professional interactions, specifically jobs and contracts, with a focus on performance and extensibility. Here's a breakdown of the key features and decisions made during development:
 
-## Data Models
+### Key Technologies Used
 
-> **All models are defined in src/model.js**
+    NestJS: A progressive Node.js framework for building efficient and scalable server-side applications.
+    Sequelize ORM: Used for interacting with the database, providing a robust abstraction layer for defining models, associations, and complex queries.
+    Caching Mechanism: To reduce database round trips for frequently accessed data, a cache layer is implemented. Cached responses are invalidated after a short time (1 hour) to ensure freshness.
 
-### Profile
+### Features
 
-A profile can be either a `client` or a `contractor`.
-clients create contracts with contractors. contractor does jobs for clients and get paid.
-Each profile has a balance property.
+    Endpoints with Swagger Documentation:
+        Swagger was integrated to serve as both API documentation and a tool for testing endpoints.
+        This eliminates the need for a traditional frontend during development or testing phases, allowing developers and stakeholders to interact with the API seamlessly.
 
-### Contract
+    Caching Implementation:
+        To optimize performance, a caching mechanism is used to store the results of certain endpoints.
+        For instance, queries that retrieve unpaid jobs or high-cost clients are cached, avoiding repeated database hits when called frequently.
+    
+    Seeding Script:
+        A seeding script (seed) is provided for populating the database with initial test data.
+        This script uses Sequelize to define models, sync tables, and insert predefined data into the database.
+        The script can be executed with the command: npm run seed
 
-A contract between and client and a contractor.
-Contracts have 3 statuses, `new`, `in_progress`, `terminated`. contracts are considered active only when in status `in_progress`
-Contracts group jobs within them.
+    Testing:
+        Unit tests are implemented to ensure that core logic functions correctly.
+        Due to time constraints, end-to-end (E2E) tests are not included but are recommended for future iterations.
 
-### Job
+    Configuration Management:
+        Some configuration values, such as Redis cache configuration, are currently hardcoded.
+        A better approach would be to use environment variables loaded from a .env file for easier deployment and flexibility.
 
-contractor get paid for jobs by clients under a certain contract.
+### Areas for Improvement
 
-## Getting Set Up
+    Hardcoded Configurations:
+        Move Redis and other critical configurations (e.g., database credentials) to a .env file for better security and portability.
 
-The exercise requires [Node.js](https://nodejs.org/en/) to be installed. We recommend using the LTS version.
+    E2E Testing:
+        Adding end-to-end tests would provide greater confidence in the API's reliability, especially in multi-layered integration scenarios.
 
-1. Start by creating a local repository for this folder.
+    Error Handling and Logging:
+        While basic error handling is in place, a more sophisticated logging system (e.g., Winston or Pino) could be added to monitor performance and detect issues in production.
 
-1. In the repo root directory, run `npm install` to gather all dependencies.
+### How to Use
 
-1. Next, `npm run seed` will seed the local SQLite database. **Warning: This will drop the database if it exists**. The database lives in a local file `database.sqlite3`.
+    Installation:
+        Run npm install to install dependencies.
 
-1. Then run `npm start` which should start both the server and the React client.
+### Database Seeding:
 
-❗️ **Make sure you commit all changes to the master branch!**
+    Populate the database with predefined test data using the command:
 
-## Technical Notes
+    npm run seed
 
-- The server is running with [nodemon](https://nodemon.io/) which will automatically restart for you when you modify and save a file.
+### Running the Application:
 
-- The database provider is SQLite, which will store data in a file local to your repository called `database.sqlite3`. The ORM [Sequelize](http://docs.sequelizejs.com/) is on top of it. You should only have to interact with Sequelize - **please spend some time reading sequelize documentation before starting the exercise.**
+    Start the development server: npm run start
+    Access the Swagger documentation at http://localhost:3001/api.
 
-- To authenticate users use the `getProfile` middleware that is located under src/middleware/getProfile.js. users are authenticated by passing `profile_id` in the request header. after a user is authenticated his profile will be available under `req.profile`. make sure only users that are on the contract can access their contracts.
-- The server is running on port 3001.
+### Testing:
 
-## APIs To Implement
-
-Below is a list of the required API's for the application.
-
-1. **_GET_** `/contracts/:id` - This API is broken 😵! it should return the contract only if it belongs to the profile calling. better fix that!
-
-1. **_GET_** `/contracts` - Returns a list of contracts belonging to a user (client or contractor), the list should only contain non terminated contracts.
-
-1. **_GET_** `/jobs/unpaid` - Get all unpaid jobs for a user (**_either_** a client or contractor), for **_active contracts only_**.
-
-1. **_POST_** `/jobs/:job_id/pay` - Pay for a job, a client can only pay if his balance >= the amount to pay. The amount should be moved from the client's balance to the contractor balance.
-
-1. **_POST_** `/balances/deposit/:userId` - Deposits money into the the the balance of a client, a client can't deposit more than 25% his total of jobs to pay. (at the deposit moment)
-
-1. **_GET_** `/admin/best-profession?start=<date>&end=<date>` - Returns the profession that earned the most money (sum of jobs paid) for any contactor that worked in the query time range.
-
-1. **_GET_** `/admin/best-clients?start=<date>&end=<date>&limit=<integer>` - returns the clients the paid the most for jobs in the query time period. limit query parameter should be applied, default limit is 2.
-
-```
- [
-    {
-        "id": 1,
-        "fullName": "Reece Moyer",
-        "paid" : 100.3
-    },
-    {
-        "id": 200,
-        "fullName": "Debora Martin",
-        "paid" : 99
-    },
-    {
-        "id": 22,
-        "fullName": "Debora Martin",
-        "paid" : 21
-    }
-]
-```
-
-## Going Above and Beyond the Requirements
-
-Given the time expectations of this exercise, we don't expect anyone to submit anything super fancy, but if you find yourself with extra time, any extra credit item(s) that showcase your unique strengths would be awesome! 🙌
-
-It would be great for example if you'd write some unit test / simple frontend demostrating calls to your fresh APIs.
-
-## Submitting the Assignment
-
-When you have finished the assignment, zip your repo (make sure to include .git folder) and send us the zip.
-
-Thank you and good luck! 🙏
+    Run unit tests using: npm test

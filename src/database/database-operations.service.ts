@@ -14,45 +14,31 @@ export class DatabaseOperationsService {
               @InjectModel(Profile) private readonly profileModel: typeof Profile,
   ) {}
 
-
-  /**
-   * Finds a contract by id and ensures it's associated with the profile (either as client or contractor).
-   * This method is wrapped inside a transaction for isolation.
-   *
-   * @param id - Contract ID
-   * @param profileId - ID of the user making the request
-   * @param profileType - Type of the profile, either 'client' or 'contractor'
-   * @returns The found contract or null if not found
-   */
   async findContractById(id: number, profileId: string, profileType: string) {
     const transaction = await this.sequelize.transaction({
       isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
     });
 
     try {
-      // Query contract with the specified transaction and isolation level
       const contract = await this.contractModel.findOne({
         where: {
           id,
           [profileType === 'client' ? 'ClientId' : 'ContractorId']: profileId,
         },
-        transaction, // Attach the transaction to the query
+        transaction,
       });
 
       if (!contract) {
-        // If no contract is found, rollback the transaction and return null
         await transaction.rollback();
         return null;
       }
 
-      // Commit the transaction if the contract is found
       await transaction.commit();
 
-      return contract; // Return the contract
+      return contract;
     } catch (error) {
-      // In case of an error, rollback the transaction
       await transaction.rollback();
-      throw error; // Re-throw the error to be handled by the caller
+      throw error;
     }
   }
 
@@ -71,14 +57,14 @@ export class DatabaseOperationsService {
             [Op.ne]: 'terminated',
           },
         },
-        transaction, // Associate the query with the transaction
+        transaction,
       });
 
       await transaction.commit();
 
       return contracts;
     } catch (error) {
-      await transaction.rollback(); // Rollback the transaction in case of an error
+      await transaction.rollback();
       throw error;
     }
   }
@@ -94,12 +80,12 @@ export class DatabaseOperationsService {
             required: true,
             where: {
               [Op.or]: [{ ClientId: profileId }, { ContractorId: profileId }],
-              status: 'in_progress', // Only active contracts
+              status: 'in_progress',
             },
           },
         ],
         where: {
-          paid: false, // Unpaid jobs only
+          paid: false,
         },
         transaction,
       });
@@ -116,7 +102,6 @@ export class DatabaseOperationsService {
     const transaction: Transaction = await this.sequelize.transaction();
 
     try {
-      // Fetch the job with contract details
       const job: any = await this.jobModel.findOne({
         where: { id: jobId },
         include: [
@@ -124,7 +109,7 @@ export class DatabaseOperationsService {
             model: Contract,
             required: true,
             where: {
-              ClientId: profile.id, // Ensure only the client can pay
+              ClientId: profile.id,
             },
           },
         ],
@@ -139,15 +124,14 @@ export class DatabaseOperationsService {
         throw new Error('Job is already paid.');
       }
 
-      const client = profile; // Profile comes from middleware
-      const contractorId = job.Contract.ContractorId;
+      const client = profile;
+      const contractorId = job.contract.ContractorId;
       const jobPrice = job.price;
 
       if (client.balance < jobPrice) {
         throw new Error('Insufficient balance to pay for the job.');
       }
 
-      // Update balances
       await this.sequelize.models.Profile.update(
         { balance: client.balance - jobPrice },
         { where: { id: client.id }, transaction },
@@ -158,7 +142,6 @@ export class DatabaseOperationsService {
         { where: { id: contractorId }, transaction },
       );
 
-      // Mark job as paid
       job.paid = true;
       job.paymentDate = new Date();
       await job.save({ transaction });
@@ -221,12 +204,12 @@ export class DatabaseOperationsService {
         ],
         include: [
           {
-            model: Contract, // Ensure this matches the model correctly
+            model: Contract,
             required: true,
             include: [
               {
                 model: Profile,
-                as: 'Contractor', // Alias matches your association
+                as: 'Contractor',
                 required: true,
               },
             ],
@@ -246,14 +229,14 @@ export class DatabaseOperationsService {
 
       await transaction.commit();
 
-      return result ? result.profession : 'No data available.';
+      return result ? result.dataValues.profession : 'No data available.';
     } catch (error) {
       await transaction.rollback();
       throw error;
     }
   }
 
-  async getBestClients(start: Date, end: Date, limit: number): Promise<any[]> {
+  async getBestClients(start: Date, end: Date, limit: number = 2): Promise<any[]> {
     const transaction = await this.sequelize.transaction();
 
     try {
@@ -261,7 +244,7 @@ export class DatabaseOperationsService {
         attributes: [
           [Sequelize.literal('"Contract->Client"."id"'), 'id'],
           [Sequelize.literal('"Contract->Client"."firstName" || " " || "Contract->Client"."lastName"'), 'fullName'],
-          [Sequelize.literal('SUM("Job"."price")'), 'total_paid'],
+          [Sequelize.literal('SUM("Job"."price")'), 'paid']
         ],
         include: [
           {
@@ -270,8 +253,9 @@ export class DatabaseOperationsService {
             include: [
               {
                 model: Profile,
-                as: 'Client', // Alias matches your association
+                as: 'Client',
                 required: true,
+                attributes: [],
               },
             ],
           },
@@ -282,18 +266,27 @@ export class DatabaseOperationsService {
             [Op.between]: [start, end],
           },
         },
-        group: ['Contract->Client.id'],
-        order: [[Sequelize.literal('total_paid'), 'DESC']],
+        group: [
+          'Contract->Client.id',
+          'Contract->Client.firstName',
+          'Contract->Client.lastName',
+        ],
+        order: [[Sequelize.literal('paid'), 'DESC']],
         limit,
         transaction,
       });
 
       await transaction.commit();
 
-      return clients.map(client => client.get());
+      return clients.map(client => ({
+        id: client.get('id'),
+        fullName: client.get('fullName'),
+        paid: parseFloat(client.getDataValue('paid')),
+      }));
     } catch (error) {
       await transaction.rollback();
       throw error;
     }
   }
+
 }

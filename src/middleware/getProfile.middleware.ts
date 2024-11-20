@@ -19,10 +19,7 @@ export class GetProfileMiddleware implements NestMiddleware {
       throw new UnauthorizedException('Profile not found');
     }
 
-    // Attach profile to request object
     req['profile'] = profile;
-
-    // Move to the next middleware or controller
     next();
   }
 }
